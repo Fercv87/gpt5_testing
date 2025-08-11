@@ -1,0 +1,56 @@
+name: "LegalAnalystMAS"
+
+objective: >
+  Build a minimal multi-agent system that can (a) answer legal questions
+  using the most recent of two JSON documents and (b) produce a structured
+  comparison between the two documents. It must be simple to run from a
+  Jupyter notebook with the OpenAI API.
+
+functional_requirements:
+  - Provide a Python package legal_mas with api.py and __init__.py.
+  - In api.py, implement:
+      - answer_question(question: str, file_a: str, file_b: str,
+                         model_name: str | None = None) -> str
+        Behavior:
+          1) Load both JSON files.
+          2) Determine the "most recent" doc using an ISO 8601 "date" field
+             if present (e.g., "2025-08-01"), else fallback to file mtime.
+          3) Build a compact prompt including selected doc metadata and its
+             salient text fields (prefer keys named "text", "content", or "body";
+             otherwise pretty-print top-level items). Truncate combined context
+             to <= 6000 characters.
+          4) Call OpenAI via langchain_openai.ChatOpenAI (temperature=0).
+          5) Return the model's string answer.
+      - compare(file_a: str, file_b: str) -> dict
+        Behavior:
+          1) Load both JSON files and decide which is newer as above.
+          2) Return a dict with keys:
+             - newer_path: str
+             - older_path: str
+             - added_keys: list[str]      # top-level keys in newer but not older
+             - removed_keys: list[str]    # top-level keys in older but not newer
+             - changed_keys: list[dict]   # objects: {key, old_excerpt, new_excerpt}
+          3) old_excerpt/new_excerpt should be short (<= 200 chars), derived
+             from stringified values.
+  - Include a tiny README.md showing how to call answer_question and compare
+    from a notebook.
+  - Avoid external deps beyond langchain_openai and pyyaml (optional).
+  - Code must be PEP 8 compliant with type hints and docstrings.
+
+non_functional_requirements:
+  - Minimal dependencies; prefer standard library.
+  - Deterministic defaults: temperature=0.
+  - Clear errors for unreadable files or invalid JSON.
+
+acceptance_criteria:
+  - The package imports with import legal_mas and from legal_mas import api.
+  - compare() correctly identifies which file is newer by "date" key when present,
+    otherwise falls back to file mtime.
+  - answer_question() returns a non-empty string when given reasonable question
+    and JSON files containing a "text" or "content" field.
+  - Context window guard: internal concatenation is truncated to <= 6000 chars.
+
+constraints:
+  - No vector store; simple in-memory context only.
+  - Keep the public API exactly as specified.
+
